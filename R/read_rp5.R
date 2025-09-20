@@ -160,7 +160,7 @@ read_rp5_folder <- function(path,
                             encoding = NULL,
                             suppress_warnings = T){
 
-  paths <- list.files(path = path, full.names = T)
+  paths <- list.files(path = path, full.names = T, pattern = ".csv$")
 
   read_and_process <- function(path_to_file){
     df <- read_rp5_csv(path_to_file, skip, delim, col_select, encoding, suppress_warnings)
@@ -170,7 +170,9 @@ read_rp5_folder <- function(path,
   result <- paths |>
     purrr::map_dfr(read_and_process)
 
+  print(paste(length(paths), "csv files were combined"))
   return(result)
+
 }
 
 
