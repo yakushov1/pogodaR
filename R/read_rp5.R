@@ -3,8 +3,10 @@
 #' Высокоуровневая обертка для функции
 #' \code{\link[readr]{read_delim}}, адаптированной для импорта csv файла,
 #' скачанного с сайта \href{https://rp5.ru/}{rp5.ru}. При импорте
-#' происходит автоматическое удаление метаданных и отбор столбцов с местным временем, температурой (T),
-#' количеством осадков (RRR), высотой снежного покрова (sss). Cтолбцы T, RRR, sss
+#' происходит автоматическое удаление метаданных и отбор столбцов с местным временем (в любом случае),
+#' и (опционально) температурой (T),
+#' количеством осадков (RRR), высотой снежного покрова (sss). Cтолбцы со второго по последний (по умолчанию
+#' T, RRR, sss)
 #' автоматически очищаются от лишних символов, остаются только дробные или целые числа.
 #'
 #' @param path character: путь к csv файлу.
@@ -12,21 +14,24 @@
 #' (обычно в верхних строках при скачивании с сайта rp5.ru хранятся метаданные).
 #' По умолчанию `skip=6`
 #' @param delim character: разделитель. По умолчанию `delim=';'`
+#' @param local_time_position integer: позиция столбца с местным временем. По умолчанию = 1
 #' @param encoding character: кодировка csv-файла.По умолчанию `encoding = NULL`,
-#'  и функция пытается распознать кодировку, указанную в имени файла.
+#'  и функция пытается автоматически распознать кодировку, указанную в имени файла.
 #'  При скачивании csv с rp5.ru информация о кодировке записана в названии, поэтому для автоматического
 #'  распознавания кодировки лучше не переименовывать файл. Если возникают ошибки, вы можете установить
 #'  значение вручную. Варианты кодировок,
-#' в которых можно скачать csv с сайта rp5.ru: "utf-8", unicode" или "ANSI" = "windows-1251"
-#' @param col_select character: вектор с названиями столбцов для отбора из исходного файла.
-#'  Работает по принципу \code{\link[dplyr]{select}}. По умолчанию отбирает столбцы с местным временем,
+#' в которых можно скачать csv с сайта rp5.ru: "utf-8", unicode" или "ANSI"
+#' (в таком случае нужно указывать "windows-1251")
+#' @param col_select character: отбор необходимых столбцов. Например col_select = c('T', 'RRR', 'sss').
+#'  По умолчанию отбирает столбцы с местным временем,
 #'  температурой (столбец T), количеством выпавших осадков (столбец RRR) и высотой снежного покрова
-#'  столбец (sss). По стандарту rp5 местное время располагается в первом столбце,
+#'  (столбец sss). По стандарту rp5 местное время располагается в первом столбце,
 #'  но можно указать и номер другого столбца. Автоматически переименуется в Local_time для унификации.
 #'
-#' @param suppress_warnings bool: по умолчанию предупреждения подавляются.
+#'
+#' @param suppress_warnings bool: по умолчанию предупреждения не отображаются в консоли.
 #' Для отладки вы можете их включить: `suppress_warnings = T`
-#' @returns A tibble: тиббл со столбцами Local_time, T, RRR, sss
+#' @returns A tibble: тиббл со столбцами Local_time (обязательно),  и (опционально) T, RRR, sss
 #' @export
 #'
 #' @examples
@@ -39,18 +44,15 @@
 #' read_csv_rp5("path/to/your/file",
 #'               skip = 6,
 #'               delim = ";",
-#'               col_select =  c(Local_time = 1,
-#'                               dplyr::matches('^T$'),
-#'                               dplyr::matches('^sss$')),
+#'               local_time_position = 1,
+#'               col_select = c('T', 'RRR', 'sss'),
 #'               encoding = "UTF-8",
 #'               suppress_warnings = F)}
 read_rp5_csv <- function(path,
                          skip = 6,
                          delim = ';',
-                         col_select = c(Local_time = 1,
-                                        dplyr::matches('^T$'),
-                                        dplyr::matches('^RRR$'),
-                                        dplyr::matches('^sss$')),
+                         local_time_position = 1,
+                         col_select = c('T', 'RRR', 'sss'),
                          encoding = NULL,
                          suppress_warnings = T){
 
@@ -77,7 +79,8 @@ read_rp5_csv <- function(path,
     df <- readr::read_delim(file = path,
                             delim = delim,
                             skip = skip,
-                            col_select = dplyr::all_of(col_select),
+                            col_select = c(Local_time = local_time_position,
+                                           dplyr::all_of(col_select)),
                             show_col_types = FALSE,
                             locale = readr::locale(encoding = encoding)) |>
       dplyr::mutate(dplyr::across(2:dplyr::last_col(),
@@ -85,21 +88,20 @@ read_rp5_csv <- function(path,
     return(df)
   }
 
+
   # настройка отключения предупреждений
   if (suppress_warnings) {
-    suppressWarnings(tryCatch({
-      inner_func()
-      }, error = function(e) {
-        stop("The encoding may be incorrect.\n",
-             "Try: encoding = 'windows-1251' (if downloaded from rp5 in ANSI encoding)\n",
-             "or encoding = 'UTF-8' \n",
-             "or encoding = 'unicode' \n", call. = FALSE)
-      }))
-  } else {
+    suppressWarnings(inner_func())
+      }
+   else {
     inner_func()
-  }
+   }
 
 }
+
+
+
+
 
 
 
@@ -111,25 +113,13 @@ read_rp5_csv <- function(path,
 #' местное время, температура (T), количество осадков (RRR) и высота снежного покрова (sss)).
 #'
 #'
-#' @param path character: путь к csv файлу.
-#' @param skip integer: количество строк в csv-файле, которые необходимо пропустить при импорте.
-#' (обычно в верхних строках при скачивании с сайта rp5.ru хранятся метаданные).
-#' По умолчанию `skip=6`
-#' @param delim character: разделитель. По умолчанию `delim=';'`
-#' @param encoding character: кодировка csv-файла.По умолчанию `encoding = NULL`,
-#'  и функция пытается распознать кодировку, указанную в имени файла.
-#'  При скачивании csv с rp5.ru информация о кодировке записана в названии, поэтому для автоматического
-#'  распознавания кодировки лучше не переименовывать файл. Если возникают ошибки, вы можете установить
-#'  значение вручную. Другие варианты кодировок,
-#' в которых можно скачать csv с сайта rp5.ru: "utf-8", unicode" или "ANSI" = "windows-1251"
-#' @param col_select character: вектор с названиями столбцов для отбора из исходного файла.
-#'  Работает по принципу \code{\link[dplyr]{select}}. По умолчанию отбирает столбцы с местным временем,
-#'  температурой (столбец T), количеством выпавших осадков (столбец RRR) и высотой снежного покрова
-#'  столбец (sss). По стандарту rp5 местное время располагается в первом столбце,
-#'  но можно указать и номер другого столбца. Автоматически переименуется в Local_time для унификации.
-#'
-#' @param suppress_warnings bool: по умолчанию предупреждения подавляются.
-#' Для отладки вы можете их включить: `suppress_warnings = T`
+#' @param path character: путь к папке с csv файлами.
+#' @param skip integer: то же, что и в \code{\link{read_rp5_csv}}
+#' @param delim character: то же, что и в \code{\link{read_rp5_csv}}
+#' @param local_time_position integer: то же, что и в \code{\link{read_rp5_csv}}
+#' @param encoding character: то же, что и в \code{\link{read_rp5_csv}}
+#' @param col_select character: то же, что и в \code{\link{read_rp5_csv}}
+#' @param suppress_warnings bool: то же, что и в \code{\link{read_rp5_csv}}
 #'
 #' @returns tibble со столбцами, указанными в col_select
 #' @export
@@ -143,27 +133,23 @@ read_rp5_csv <- function(path,
 #' read_rp5_folder("path/to/your/folder",
 #'                  skip = 6,
 #'                  delim = ";",
-#'                  col_select = c(Local_time = 1,
-#'                                              dplyr::matches('^T$'),
-#'                                              dplyr::matches('^RRR$'),
-#'                                              dplyr::matches('^sss$')),#'
+#'                  local_time_position = 1,
+#'                  col_select = c('T', 'RRR', 'sss'),
 #'                  encoding = NULL,
 #'                  suppress_warnings = T)  }
 #'
 read_rp5_folder <- function(path,
                             skip = 6,
                             delim = ';',
-                            col_select = c(Local_time = 1,
-                                           dplyr::matches('^T$'),
-                                           dplyr::matches('^RRR$'),
-                                           dplyr::matches('^sss$')),
+                            local_time_position = 1,
+                            col_select = c('T', 'RRR', 'sss'),
                             encoding = NULL,
                             suppress_warnings = T){
 
   paths <- list.files(path = path, full.names = T, pattern = ".csv$")
 
   read_and_process <- function(path_to_file){
-    df <- read_rp5_csv(path_to_file, skip, delim, col_select, encoding, suppress_warnings)
+    df <- read_rp5_csv(path_to_file, skip, delim, local_time_position, col_select, encoding, suppress_warnings)
     return(df)
   }
 
