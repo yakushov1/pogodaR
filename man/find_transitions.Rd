@@ -2,25 +2,28 @@
 % Please edit documentation in R/find_transitions.R
 \name{find_transitions}
 \alias{find_transitions}
-\title{Find the number of parameter transitions through the threshold level}
+\title{Найти переход заданного параметра через пороговое значение}
 \usage{
 find_transitions(df, parameter, threshold)
 }
 \arguments{
-\item{df}{a tibble containing the columns: year, month, day, parameter (for example, temperature)}
+\item{df}{тиббл, содержащий как минимум 1 столбец - параметр, для которого будут вычисляться переходы (например, с температурой). Тиббл предварительно можно сгруппировать (например, вычислить переходы параметра через порог для каждого года, месяца и дня)}
 
-\item{parameter}{a character: the name of the column to search for the number of crossings over the threshold}
+\item{parameter}{a character: название столбца, для которого будут вычисляться переходы через пороговое значение threshold}
 
-\item{threshold}{a numeric: threshold value}
+\item{threshold}{a numeric: пороговое значение}
 }
 \value{
-a tibble: Year, Month, Num_of_transitions - the number of parameter transitions through the threshold level
+a tibble: содержит группирующие столбцы, столбец, для которого вычислялись переходы, а также столбец chng - порядковый номер перехода параметра через заданное пороговое значение.
 }
 \description{
-Find the number of parameter transitions through the threshold level
+Служебная функция.
+Вычисляет факт перехода необходимого параметра через заданное пороговое значение.
+Результат используется другими функциями внутри пакета.
+По умолчанию удаляет пропущенные значения в параметре, поэтому NA предварительно необходимо обрабатывать.
 }
 \examples{
 \dontrun{
-counting the number of temperature transitions after 0 degrees
-find_transitions(dataframe, T, 0)}
+Найти переходы температур через 0 градусов
+find_transitions(dataframe, T_avg, 0)}
 }

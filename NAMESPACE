@@ -2,6 +2,8 @@
 
 export(aggregate_rp5)
 export(find_transitions)
+export(na_count_rp5)
+export(num_of_transitions)
 export(read_rp5_csv)
 export(read_rp5_folder)
 export(separate_date_rp5)

@@ -17,17 +17,31 @@ read_rp5_folder(
 \arguments{
 \item{path}{character: путь к папке с csv файлами.}
 
-\item{skip}{integer: то же, что и в \code{\link{read_rp5_csv}}}
+\item{skip}{integer: количество строк в csv-файле, которые необходимо пропустить при импорте.
+(обычно в верхних строках при скачивании с сайта rp5.ru хранятся метаданные).
+По умолчанию \code{skip=6}}
 
-\item{delim}{character: то же, что и в \code{\link{read_rp5_csv}}}
+\item{delim}{character: разделитель. По умолчанию \code{delim=';'}}
 
-\item{local_time_position}{integer: то же, что и в \code{\link{read_rp5_csv}}}
+\item{local_time_position}{integer: позиция столбца с местным временем. По умолчанию = 1
+По стандарту rp5 местное время располагается в первом столбце,
+но можно указать и номер другого столбца. Автоматически переименуется в Local_time для унификации.}
 
-\item{col_select}{character: то же, что и в \code{\link{read_rp5_csv}}}
+\item{col_select}{character: отбор необходимых столбцов. Например col_select = c('T', 'RRR', 'sss').
+По умолчанию отбирает столбцы с местным временем,
+температурой (столбец T), количеством выпавших осадков (столбец RRR) и высотой снежного покрова
+(столбец sss).}
 
-\item{encoding}{character: то же, что и в \code{\link{read_rp5_csv}}}
+\item{encoding}{character: кодировка csv-файла.По умолчанию \code{encoding = NULL},
+и функция пытается автоматически распознать кодировку, указанную в имени файла.
+При скачивании csv с rp5.ru информация о кодировке записана в названии, поэтому для автоматического
+распознавания кодировки лучше не переименовывать файл. Если возникают ошибки, вы можете установить
+значение вручную. Варианты кодировок,
+в которых можно скачать csv с сайта rp5.ru: "utf-8", unicode" или "ANSI"
+(в таком случае нужно указывать "windows-1251")}
 
-\item{suppress_warnings}{bool: то же, что и в \code{\link{read_rp5_csv}}}
+\item{suppress_warnings}{bool: по умолчанию предупреждения не отображаются в консоли.
+Для отладки вы можете их включить: \code{suppress_warnings = T}}
 }
 \value{
 tibble со столбцами, указанными в col_select

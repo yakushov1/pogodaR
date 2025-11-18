@@ -1,25 +1,65 @@
-#' Find the number of parameter transitions through the threshold level
+#' Найти переход заданного параметра через пороговое значение
+#' @description
+#' Служебная функция.
+#' Вычисляет факт перехода необходимого параметра через заданное пороговое значение.
+#' Результат используется другими функциями внутри пакета.
+#' По умолчанию удаляет пропущенные значения в параметре, поэтому NA предварительно необходимо обрабатывать.
+#' @param df тиббл, содержащий как минимум 1 столбец - параметр, для которого будут вычисляться переходы (например, с температурой). Тиббл предварительно можно сгруппировать (например, вычислить переходы параметра через порог для каждого года, месяца и дня)
+#' @param parameter a character: название столбца, для которого будут вычисляться переходы через пороговое значение threshold
+#' @param threshold a numeric: пороговое значение
 #'
-#' @param df a tibble containing the columns: year, month, day, parameter (for example, temperature)
-#' @param parameter a character: the name of the column to search for the number of crossings over the threshold
-#' @param threshold a numeric: threshold value
-#'
-#' @returns a tibble: Year, Month, Num_of_transitions - the number of parameter transitions through the threshold level
+#' @returns a tibble: содержит группирующие столбцы, столбец, для которого вычислялись переходы, а также столбец chng - порядковый номер перехода параметра через заданное пороговое значение.
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' counting the number of temperature transitions after 0 degrees
-#' find_transitions(dataframe, T, 0)}
+#' Найти переходы температур через 0 градусов
+#' find_transitions(dataframe, T_avg, 0)}
 find_transitions <- function(df, parameter, threshold){
+
+  NA_n = df |>
+    dplyr::filter(is.na({{parameter}})) |>
+    dplyr::summarise(n = dplyr::n()) |>
+    dplyr::pull(.data$n)
+
+  print(paste(NA_n, 'missing values were deleted'))
+
   df |>
-    dplyr::filter(is.na({{parameter}})==F) |>
-    dplyr::group_by(.data$Year, .data$Month) |>
+    dplyr::filter(!is.na({{parameter}})) |>
     dplyr::mutate(
-      more_then_zero = {{parameter}} > {{threshold}}, # логический столбец, параметр больше 0? (TRUE | FALSE)
-      chng1 = cumsum(.data$more_then_zero != dplyr::lag(.data$more_then_zero, def = dplyr::first(.data$more_then_zero)))
+      more_then_threshold = {{parameter}} > {{threshold}}, # логический столбец, параметр больше порога? (TRUE | FALSE)
+      chng = cumsum(.data$more_then_threshold != dplyr::lag(.data$more_then_threshold, def = dplyr::first(.data$more_then_threshold)))
     ) |>
-    dplyr::summarise(Num_of_transitions = max(.data$chng1))
+    dplyr::select({{parameter}}, .data$chng)
+
+}
+
+
+#' Посчитать количество переходов параметра через заданный порог
+#' @description
+#' Подсчет количества переходов параметра через заданный порог.
+#' По умолчанию удаляет пропущенные значения в параметре, поэтому NA предварительно необходимо обрабатывать.
+#' Может применяться после группировки датафрейма, например, для расчета количества переходов в каждом месяце, году и т.д.
+#' @param df - тиббл, содержащий как минимум 1 столбец - параметр, для которого будут вычисляться переходы (например, с температурой). Тиббл предварительно можно сгруппировать (например, вычислить переходы параметра через порог для каждого года, месяца и дня)
+#' @param parameter a character: название столбца, для которого будут вычисляться переходы через пороговое значение threshold
+#' @param threshold a numeric: пороговое значение
+#'
+#' @returns  a tibble: содержит группирующие столбцы (если есть), столбец, для которого вычислялись переходы, а также столбец Num_of_transitions - количество переходов параметра через заданное значение
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' Найти переходы температур через 0 градусов
+#' num_of_transitions(dataframe, T_avg, 0)
+#'
+#' #' Найти переходы температур через 0 градусов для каждого месяца
+#' dataframe |>
+#' group_by(Year, Month) |>
+#' num_of_transitions(T_avg, 0)}
+num_of_transitions <-  function(df, parameter, threshold){
+  df |>
+    find_transitions({{parameter}}, {{threshold}}) |>
+    dplyr::summarise(Num_of_transitions = max(.data$chng))
 }
 
 
