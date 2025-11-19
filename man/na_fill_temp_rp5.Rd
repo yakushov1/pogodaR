@@ -20,8 +20,7 @@ a tibble:  исходный тиббл с заполненными пропус�
 }
 \examples{
 \dontrun{
-# Подсчет пропусков в агрегированных данных
-df <- read_rp5_folder('path') |>
-separate_date_rp5() |>
-  na_fill_temp_rp5(replace_original = F) }
+read_rp5_folder('path') |>
+      separate_date_rp5() |>
+      na_fill_temp_rp5(replace_original = F) }
 }
