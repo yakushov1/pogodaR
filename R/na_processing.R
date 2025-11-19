@@ -41,5 +41,51 @@ na_count_rp5 <- function(df){
 
 }
 
+# обычно, если пропущен RRR в необработанных данных, то это просто 0.
+# снег измеряется не каждый час, а хотя бы один раз в сутки.
+# поэтому снег лучше агрегировать до суточного значения, а потом обрабатывать пропуски
+# температура - если пропущена, то заполнять линейной интерполяцией. Имеет смысл заполнять сырые данные, потом агрегировать
+
+
+#' Заполнение пропущенных значений температур
+#' @description
+#' Выполняется для "сырых" данных, но применим и к агрегированным. Заполнение пропусков методом линейной интерполяции
+#' (пакет zoo). По умолчанию пропуски в начале или конце датафрейма заполняются соседними значениями.
+#'
+#' @param df a tibble: Должен содержать столбцы с температурой (ожидаются названия T или T_avg)
+#' @param replace_original LOGICAL: заменять ли исходный столбец новым столбцом без пропусков? По умолчанию TRUE
+#'
+#' @returns a tibble:  исходный тиббл с заполненными пропусками в столбце с температурами, либо с новым столбцом, в котором заполнены пропуски (исходный столбец с температурами остается неизменным)
+#' @export
+#'
+#' @examples
+#' \dontrun{
+  #' # Подсчет пропусков в агрегированных данных
+  #' df <- read_rp5_folder('path') |>
+  #' separate_date_rp5() |>
+  #'   na_fill_temp_rp5(replace_original = F) }
+na_fill_temp_rp5 <- function(df, replace_original = TRUE){
+  # Определяем имя столбца с температурой
+  temp_col <- NULL
+  if("T" %in% names(df)) {
+    temp_col <- "T"
+  } else if ("T_avg" %in% names(df)) {
+    temp_col <- "T_avg"
+  } else {
+    stop("The column with temperature values was not found. The names 'T' or 'T_avg' were expected")
+  }
+
+  # Создаем интерполированные значения
+  interpolated <- zoo::na.approx(df[[temp_col]], na.rm = FALSE, rule = 2)
+
+  if(replace_original == TRUE){
+    df[[temp_col]] <- interpolated
+  } else {
+    df$Temperature_interpolated <- interpolated
+  }
+
+  return(df)
+
+}
 
 
