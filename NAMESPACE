@@ -3,6 +3,8 @@
 export(aggregate_rp5)
 export(find_transitions)
 export(freq_of_transitions)
+export(linear_trend)
+export(means_smooth)
 export(na_count_rp5)
 export(na_fill_sn_rp5)
 export(na_fill_temp_rp5)

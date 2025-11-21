@@ -16,4 +16,5 @@ Imports:
     rlang,
     purrr,
     stringr,
-    zoo
+    zoo,
+    pracma

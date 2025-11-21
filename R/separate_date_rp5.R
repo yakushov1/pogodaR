@@ -10,7 +10,7 @@
 #' Датафрейм обязательно должен содержать столбец Local_time в исходном формате, предоставляемом rp5.
 #' @param format_of_local_time a character: формат времени, по умолчанию: "%d.%m.%Y %R".
 #'  Подробности: \code{\link[lubridate]{as_date}}
-#' @returns a tibble: тиббл со столбцами Year (factor), Month (factor), Day (integer), T, RRR, sss (double)
+#' @returns a tibble: тиббл со столбцами Year, Month, Day, T, RRR, sss
 #' @export
 #'
 #' @examples
@@ -26,8 +26,8 @@ separate_date_rp5 <- function(df,
 
   df <- df |>
     dplyr::mutate(Local_time = lubridate::as_datetime(.data$Local_time, format = format_of_local_time)) |>
-    dplyr::mutate(Year = as.factor(lubridate::year(.data$Local_time)),
-                  Month = as.factor(lubridate::month(.data$Local_time)),
+    dplyr::mutate(Year = lubridate::year(.data$Local_time),
+                  Month = lubridate::month(.data$Local_time),
                   Day = lubridate::mday(.data$Local_time),
                   .before = 'Local_time') |>
     dplyr::select(!.data$Local_time)

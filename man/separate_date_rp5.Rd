@@ -15,7 +15,7 @@ separate_date_rp5(df, format_of_local_time = "\%d.\%m.\%Y \%R")
 Подробности: \code{\link[lubridate]{as_date}}}
 }
 \value{
-a tibble: тиббл со столбцами Year (factor), Month (factor), Day (integer), T, RRR, sss (double)
+a tibble: тиббл со столбцами Year, Month, Day, T, RRR, sss
 }
 \description{
 Выделить год, месяц и день из столбца Local_time в отдельные столбцы. Используйте для обработки
