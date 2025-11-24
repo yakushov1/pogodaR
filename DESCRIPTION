@@ -16,5 +16,7 @@ Imports:
     rlang,
     purrr,
     stringr,
+    ggplot2,
     zoo,
-    pracma
+    pracma,
+    scales
