@@ -17,15 +17,17 @@
 #' find_transitions(dataframe, T_avg, 0)}
 find_transitions <- function(df, parameter, threshold){
 
-  NA_n = df |>
-    dplyr::filter(is.na({{parameter}})) |>
-    dplyr::summarise(n = dplyr::n()) |>
-    dplyr::pull(.data$n)
 
-  print(paste(NA_n, 'missing values were deleted'))
+  # Проверяем наличие NA
+  na_count <- sum(is.na(dplyr::pull(df, {{parameter}})))
+
+  if (na_count > 0) {
+    stop("Data contains ", na_count, " NA values. Use na_fill functions first.")
+  }
+
+
 
   df |>
-    dplyr::filter(!is.na({{parameter}})) |>
     dplyr::mutate(
       more_then_threshold = {{parameter}} > {{threshold}}, # логический столбец, параметр больше порога? (TRUE | FALSE)
       chng = cumsum(.data$more_then_threshold != dplyr::lag(.data$more_then_threshold, def = dplyr::first(.data$more_then_threshold)))

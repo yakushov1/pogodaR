@@ -96,7 +96,7 @@ na_fill_temp_rp5 <- function(df, replace_original = TRUE){
 #' Если число подряд следующих пропусков менее порога - заменить на последнее значение перед пропусками.
 #' Работает только с датафреймом суточного разрешения! (должны быть столбцы Year, Month, Day)
 #'
-#' @param df a tibble: данные суточного разрешения со столбцами Year, Month, Day и sss_svg.
+#' @param df a tibble: данные суточного разрешения со столбцами Year, Month, Day и sss_avg.
 #' @param threshold numeric: пороговое значение длины "окна" с пропусками
 #' @param replace_original logical: заменять ли исходный столбец? по умолчанию TRUE
 #'
@@ -112,38 +112,58 @@ na_fill_temp_rp5 <- function(df, replace_original = TRUE){
 #'       na_fill_sn_rp5(10, replace_original = F)}
 na_fill_sn_rp5 <- function(df, threshold, replace_original = TRUE){
 
+
+  # Проверка, что это данные суточного разрешения
+  required_cols <- c("Year", "Month", "Day", "sss_avg")
+  missing_cols <- setdiff(required_cols, names(df))
+  if (length(missing_cols) > 0) {
+    stop("Missing required columns for daily data: ",
+         paste(missing_cols, collapse = ", "))
+  }
+
   df <- df |>
-    dplyr::arrange(.data$Year, .data$Month, .data$Day)
+    dplyr::arrange(.data$Year, .data$Month, .data$Day) |>
+    dplyr::mutate(order_number = dplyr::row_number())
 
+  # Создаем группы последовательных NA/non-NA значений
+  na_series <- df |>
+    dplyr::mutate(
+      is_na = is.na(.data$sss_avg),
+      # Определяем точки смены состояния (NA -> не NA и наоборот)
+      change_point = .data$is_na != dplyr::lag(.data$is_na, default = .data$is_na[1]),
+      group_id = cumsum(.data$change_point)
+    ) |>
+    dplyr::filter(.data$is_na) |>  # Оставляем только NA значения
+    dplyr::group_by(.data$group_id) |>
+    dplyr::summarise(
+      first_na_position = min(.data$order_number),
+      last_na_position = max(.data$order_number),
+      na_count = dplyr::n(),
+      .groups = 'drop'
+    ) |>
+    dplyr::filter(.data$na_count > threshold)  # Оставляем только длинные серии NA
 
-  na_position <- df |>
-    dplyr::select(.data$sss_avg) |> # только нужный столбец для экономии памяти
-    dplyr::mutate(order_number = c(1:nrow(df))) |>  # зададим всем строкам порядковые номера
-    dplyr::filter(!is.na(.data$sss_avg)) |> # оставим только непропущенные значения
-    dplyr::mutate(first_na_position = dplyr::lag(.data$order_number)+1, # позиция первого NA в серии подряд следующих пропусков
-                  last_na_position = .data$order_number - 1, # позиция последнего NA в серии подряд следующих пропусков
-                  na_count = .data$order_number - .data$first_na_position) |> # количество пропусков подряд
-    dplyr::filter(.data$na_count > {threshold}) # можно менять пороговое значение
-
-
+  # Создаем вектор индексов для замены на 0
   indices_to_replace <- unlist(
-    purrr::map2(na_position$first_na_position, na_position$last_na_position, ~ .x:.y)
+    purrr::map2(na_series$first_na_position, na_series$last_na_position, ~ .x:.y)
   )
 
   if(replace_original == TRUE){
-    df$sss_avg[indices_to_replace] <- 0 # заменить на 0 все строки, где снег был пропущен подряд более, чем threshold
+    df$sss_avg[indices_to_replace] <- 0  # Заменяем длинные серии NA на 0
 
+    # Заполняем оставшиеся пропуски (короткие серии) предыдущими значениями
     df <- df |>
-      tidyr::fill(.data$sss_avg, .direction = "down") # оставшиеся пропуски заполнить предыдущим непропущенным числом
-  } else{
-    df$sss_replaced = df$sss_avg
-    df$sss_replaced[indices_to_replace] <- 0
+      tidyr::fill(.data$sss_avg, .direction = "downup")  # В обе стороны
+  } else {
+    df$sss_replaced <- df$sss_avg  # Создаем копию столбца
+    df$sss_replaced[indices_to_replace] <- 0  # Заменяем длинные серии NA на 0
 
+    # Заполняем оставшиеся пропуски (короткие серии) предыдущими значениями
     df <- df |>
-      tidyr::fill(.data$sss_replaced, .direction = "down")
+      tidyr::fill(.data$sss_replaced, .direction = "downup")  # В обе стороны
   }
-  return(df)
 
+  # Убираем временные столбцы и возвращаем результат
+  return(df |> dplyr::select(-.data$order_number))
 }
-
 

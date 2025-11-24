@@ -6,3 +6,4 @@
 .quarto
 .csv
 test_script.R
+inst/extdata

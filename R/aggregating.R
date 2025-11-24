@@ -42,7 +42,7 @@
 #'}
 aggregate_rp5 <- function(df, resolution){
   if (!resolution %in% c('day', 'month', 'year')) {
-    return("Error: Choose correct resolution for aggregating: 'year', 'month' or 'day'")
+    stop("Error: Choose correct resolution for aggregating: 'year', 'month' or 'day'")
   }
 
   # Группировка
@@ -51,16 +51,48 @@ aggregate_rp5 <- function(df, resolution){
                        "month" = c("Year", "Month"),
                        "year" = "Year")
 
+  # Определяем, с какими данными работаем
+  has_aggregated <- any(c("T_avg", "sss_avg", "RRR_sum") %in% names(df))
+  has_raw <- any(c("T", "sss", "RRR") %in% names(df))
+
+  if (has_aggregated && has_raw) {
+    stop("Data contains both raw and aggregated columns. Please use only one type.")
+  } else if (has_aggregated) {
+    message("Aggregated columns were detected")
+  } else if (has_raw) {
+    message("Aggregated columns were NOT detected. Processing raw data")
+  } else {
+    stop("No temperature, precipitation or snow depth columns found. Expected: T/T_avg, RRR/RRR_sum, sss/sss_avg")
+  }
+
+
+
   result <- df |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
-    dplyr::summarise(N = dplyr::n(),
-                     dplyr::across(dplyr::any_of(c("T_avg", "sss_avg")), ~round(mean(.x, na.rm = TRUE), 2)),
-                     dplyr::across(dplyr::any_of(c("T", "sss")), list("avg" = ~round(mean(.x, na.rm = TRUE), 2))),
-                     dplyr::across(dplyr::any_of(c("RRR_sum")), ~round(sum(.x, na.rm = TRUE), 2)),
-                     dplyr::across(dplyr::any_of(c("RRR")), list("sum" = ~round(sum(.x, na.rm = TRUE), 2))),
-                     .groups = 'drop')
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars)))
+
+  if (has_aggregated) {
+    # Обработка уже агрегированных данных
+    result <- result |>
+      dplyr::summarise(
+        N = dplyr::n(),
+        dplyr::across(dplyr::any_of(c("T_avg", "sss_avg")), ~round(mean(.x, na.rm = TRUE), 2)),
+        dplyr::across(dplyr::any_of("RRR_sum"), ~round(sum(.x, na.rm = TRUE), 2)),
+        .groups = 'drop'
+      )
+  } else {
+    # Обработка сырых данных
+    result <- result |>
+      dplyr::summarise(
+        N = dplyr::n(),
+        dplyr::across(dplyr::any_of("T"), list("avg" = ~round(mean(.x, na.rm = TRUE), 2))),
+        dplyr::across(dplyr::any_of("sss"), list("avg" = ~round(mean(.x, na.rm = TRUE), 2))),
+        dplyr::across(dplyr::any_of("RRR"), list("sum" = ~round(sum(.x, na.rm = TRUE), 2))),
+        .groups = 'drop'
+      )
+  }
 
   return(result)
 }
+
 
 

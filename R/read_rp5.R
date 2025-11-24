@@ -60,21 +60,28 @@ read_rp5_csv <- function(path,
   inner_func <- function() {
 
     if (is.null(encoding)) {
-    encoding <- stringr::str_extract(path, "(?<=\\.)(ansi|utf8|unic)(?=\\.)")
+      encoding <- stringr::str_extract(path, "(?<=\\.)(ansi|utf8|unic)(?=\\.)")
 
-    if (encoding == 'ansi'){
-      encoding = 'windows-1251'
+      # Сообщаем о автоматическом определении
+      if (!is.na(encoding)) {
+        original_encoding <- encoding
+        if (encoding == 'ansi'){
+          encoding = 'windows-1251'
+        } else if (encoding == 'unic'){
+          encoding = 'unicode'
+        } else if (encoding == 'utf8'){
+          encoding = 'utf-8'
+        }
+        message("Auto-detected encoding: '", original_encoding, "' -> '", encoding, "'")
+      } else {
+        # Если не удалось определить из имени файла
+        encoding <- "UTF-8"  # fallback на UTF-8
+        message("Cannot detect encoding from filename. Using default: '", encoding, "'")
+      }
+    } else {
+      message("Using user-specified encoding: '", encoding, "'")
     }
 
-    if (encoding == 'unic'){
-      encoding = 'unicode'
-    }
-
-    if (encoding == 'utf8'){
-      encoding = 'utf-8'
-    }
-
-    }
 
     df <- readr::read_delim(file = path,
                             delim = delim,
@@ -172,7 +179,7 @@ read_rp5_folder <- function(path,
   result <- paths |>
     purrr::map_dfr(read_and_process)
 
-  print(paste(length(paths), "csv files were combined"))
+  message(paste(length(paths), "csv files were combined"))
   return(result)
 
 }

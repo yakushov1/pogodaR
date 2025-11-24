@@ -36,7 +36,7 @@
 
 graph_with_trends <- function(data,
                           trend,
-                          devide_by_month = FALSE,
+                          divide_by_month = FALSE,
                           y,
                           y_smoothed,
                           geom_type = 'line',
@@ -69,7 +69,7 @@ graph_with_trends <- function(data,
 
   # разбивать ли по месяцам?
 
-  if (devide_by_month){
+  if (divide_by_month){
     graph <- graph +
       ggplot2::facet_wrap(~.data$Month, scales = 'free')
   }
