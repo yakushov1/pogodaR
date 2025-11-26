@@ -7,3 +7,4 @@
 .csv
 test_script.R
 inst/extdata
+tests/testthat/test_data

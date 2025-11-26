@@ -30,7 +30,7 @@ find_transitions <- function(df, parameter, threshold){
   df |>
     dplyr::mutate(
       more_then_threshold = {{parameter}} > {{threshold}}, # логический столбец, параметр больше порога? (TRUE | FALSE)
-      chng = cumsum(.data$more_then_threshold != dplyr::lag(.data$more_then_threshold, def = dplyr::first(.data$more_then_threshold)))
+      chng = cumsum(.data$more_then_threshold != dplyr::lag(.data$more_then_threshold, default = dplyr::first(.data$more_then_threshold)))
     )
 
 }

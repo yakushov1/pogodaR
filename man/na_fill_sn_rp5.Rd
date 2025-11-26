@@ -7,7 +7,7 @@
 na_fill_sn_rp5(df, threshold, replace_original = TRUE)
 }
 \arguments{
-\item{df}{a tibble: данные суточного разрешения со столбцами Year, Month, Day и sss_svg.}
+\item{df}{a tibble: данные суточного разрешения со столбцами Year, Month, Day и sss_avg.}
 
 \item{threshold}{numeric: пороговое значение длины "окна" с пропусками}
 

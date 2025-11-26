@@ -30,7 +30,7 @@ separate_date_rp5 <- function(df,
                   Month = lubridate::month(.data$Local_time),
                   Day = lubridate::mday(.data$Local_time),
                   .before = 'Local_time') |>
-    dplyr::select(!.data$Local_time)
+    dplyr::select(!dplyr::all_of('Local_time'))
 
   return(df)
 }

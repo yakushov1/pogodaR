@@ -4,7 +4,7 @@
 #'
 #' @param data a tibble: тиббл с агрегированными данными. Должен содержать столбцы Year, (Month - для данных месячного разрешения), а также столбец с визуализируемым параметром
 #' @param trend a tibble: тиббл с параметрами тренда.
-#' @param devide_by_month logical, default = FALSE: если данные месячного разрешения, установить TRUE, чтобы график разбивался на фасетки по месяцам.
+#' @param divide_by_month logical, default = FALSE: если данные месячного разрешения, установить TRUE, чтобы график разбивался на фасетки по месяцам.
 #' @param y название столбца с параметром для визуализации
 #' @param y_smoothed название столбца со сглаженным параметром для визуализации. Если вы не использовали сглаживание, укажите то же имя столбца, что и в y.
 #' @param geom_type тип геометрии. По умолчанию 'line', возможен вариант 'col'
@@ -44,12 +44,33 @@ graph_with_trends <- function(data,
                           y_label ='Temperature, \u00b0C'){
 
 
+  y_name <- deparse(substitute(y)) # для вставки в легенду
+
+  if (y_name %in% c('T', 'T_avg')){
+    y_name_for_caption = 'Temperature'
+  } else if (y_name %in% c('sss', 'sss_avg')){
+    y_name_for_caption = 'Snow depth'
+  } else {
+    y_name_for_caption = 'y'
+  }
+
 
   graph <- ggplot2::ggplot(data, ggplot2::aes(.data$Year, {{y}}))+
     ggplot2::geom_line(alpha = 0.5)+
     ggplot2::theme_minimal() +
     ggplot2::scale_x_continuous(labels = scales::number_format(accuracy = 1, big.mark = ""))+
-    ggplot2::labs(x = x_label, y = y_label)
+    ggplot2::labs(x = x_label,
+                  y = y_label,
+                  caption = paste("<span style='color:gray50;'>", y_name_for_caption, "</span> <br>
+                 <span style='color:blue;'>smoothed by a moving average.</span><br>
+                 <span style='color:red;'>linear trend</span>"))+
+    ggplot2::theme(
+                   plot.caption = ggtext::element_markdown(
+                     hjust = 0,
+                     size = 9,
+                     lineheight = 1.2
+                   )
+                 )
 
 
 
@@ -57,15 +78,12 @@ graph_with_trends <- function(data,
   if (geom_type == "col"){
     graph <- graph +
       ggplot2::geom_col(ggplot2::aes(y = {{y_smoothed}}), fill = 'lightblue')+
-      ggplot2::geom_smooth(ggplot2::aes(y = {{y_smoothed}}), method = 'lm')
+      ggplot2::geom_smooth(ggplot2::aes(y = {{y_smoothed}}), method = 'lm', color = 'red')
   } else if (geom_type == 'line'){
     graph <- graph +
       ggplot2::geom_line(ggplot2::aes(y = {{y_smoothed}}), color = 'blue')+
-      ggplot2::geom_smooth(ggplot2::aes(y = {{y_smoothed}}), method = 'lm')
+      ggplot2::geom_smooth(ggplot2::aes(y = {{y_smoothed}}), method = 'lm', color = 'red')
   }
-
-
-
 
   # разбивать ли по месяцам?
 

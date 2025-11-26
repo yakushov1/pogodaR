@@ -153,7 +153,7 @@ na_fill_sn_rp5 <- function(df, threshold, replace_original = TRUE){
 
     # Заполняем оставшиеся пропуски (короткие серии) предыдущими значениями
     df <- df |>
-      tidyr::fill(.data$sss_avg, .direction = "downup")  # В обе стороны
+      tidyr::fill("sss_avg", .direction = "downup")  # В обе стороны
   } else {
     df$sss_replaced <- df$sss_avg  # Создаем копию столбца
     df$sss_replaced[indices_to_replace] <- 0  # Заменяем длинные серии NA на 0
@@ -164,6 +164,6 @@ na_fill_sn_rp5 <- function(df, threshold, replace_original = TRUE){
   }
 
   # Убираем временные столбцы и возвращаем результат
-  return(df |> dplyr::select(-.data$order_number))
+  return(df |> dplyr::select(-"order_number"))
 }
 

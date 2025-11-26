@@ -7,7 +7,7 @@
 graph_with_trends(
   data,
   trend,
-  devide_by_month = FALSE,
+  divide_by_month = FALSE,
   y,
   y_smoothed,
   geom_type = "line",
@@ -20,7 +20,7 @@ graph_with_trends(
 
 \item{trend}{a tibble: тиббл с параметрами тренда.}
 
-\item{devide_by_month}{logical, default = FALSE: если данные месячного разрешения, установить TRUE, чтобы график разбивался на фасетки по месяцам.}
+\item{divide_by_month}{logical, default = FALSE: если данные месячного разрешения, установить TRUE, чтобы график разбивался на фасетки по месяцам.}
 
 \item{y}{название столбца с параметром для визуализации}
 
