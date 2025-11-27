@@ -74,7 +74,7 @@ devtools::install_github("yakushov1/pogodaR")
   Ниже приведена схема наиболее типичного пайплайна использования
   пакета:
 
-![](images/pogodaR.png)
+![](inst/images/pogodaR.png)
 
 ## Типичный пайплан обработки данных
 
