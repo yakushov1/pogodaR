@@ -68,7 +68,7 @@ read_rp5_csv <- function(path,
         if (encoding == 'ansi'){
           encoding = 'windows-1251'
         } else if (encoding == 'unic'){
-          encoding = 'unicode'
+          encoding = 'UTF-16LE'
         } else if (encoding == 'utf8'){
           encoding = 'utf-8'
         }
