@@ -2,8 +2,6 @@
 output: github_document
 ---
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -13,43 +11,193 @@ knitr::opts_chunk$set(
 )
 ```
 
-# pogodaR
+# Введение
 
-<!-- badges: start -->
-<!-- badges: end -->
+К основным климатическим факторам, влияющим на численность мелких млекопитающих, относятся, например, температура почвы, воздуха, количество осадков, качественные и количественные характеристики снежного покрова и т.д. В случае высоких широт важнейшими являются сочетание температурных показателей и характеристик снежного покрова, который как абиотический фактор (хионический, или нивальный) в обиход экологов впервые был введен А.Н. Формозовым, им же была определена его специфика – положение в качестве связующего звена между климатическими и эдафическими факторами (Формозов, 1946).
 
-The goal of pogodaR is to ...
+Конечно, удобнее всего анализировать описание непосредственно качественнных характеристик снежного покрова. Но, к сожалению, такие наблюдения ведутся далеко не на всех метеоролоогических станциях. Поэтому можно оценить косвенные показатели - например, температуру и ее переходы через 0.
 
-## Installation
+Так, при переходах температур через 0 градусов могут нарушаться защитные свойства снежного покрова из-за его уплотнения и образования ледяной корки на его поверхности. Такие условия губительны для, например, мелких млекопитающих, зимующих преимущественно под снегом (разумеется, в определенных природных зонах), поскольку такие явления ограничивают их передвижение и доступ к корму. Несомненно, так называемые "морозные качели" оказывают влияние и на другие организмы.
 
-You can install the development version of pogodaR from [GitHub](https://github.com/) with:
+Несмотря на очевидную важность расчета этого параметра, авторам неизвестно бесплатное, русскоязычное и легкое в освоении open-source решение, позволяющее быстро оценить эти параметры, что было бы очень удобно для широкого круга заинтересованных лиц.
+
+Пакет pogodaR - попытка закрыть этот пробел. Мы предоставляем простые инструменты для анализа метеорологических данных (в первую очередь с сайта [RP5.ru](https://rp5.ru/), поскольку он является одним из популярнеших источников метеоданных в странах СНГ). Основной акцент  - изучение переходных периодов, также предоставляется функционал для быстрой обработки исходных данных и оценок трендов.
+
+## Установка
+
+Вы можете установить pogodaR из GitHub следующим образом:
 
 ``` r
-# install.packages("pak")
-pak::pak("yakushov1/pogodaR")
+# Установите devtools если еще не установлен
+install.packages("devtools")
+
+# Загрузите библиотеку
+library(devtools)
+
+# Установите пакет из GitHub
+devtools::install_github("yakushov1/pogodaR")
 ```
 
-## Example
+## Обзор возможностей
 
-This is a basic example which shows you how to solve a common problem:
+Пакет предоставляет полный конвейер обработки метеоданных:
 
-```{r example}
+-   **Импорт данных**: чтение CSV файлов (по отдельности или всей папкой сразу), загруженных с сайта с [RP5.ru](https://rp5.ru/) (зарузка выполняется пользователем самостоятельно)
+
+-   **Предобработка**: обработка пропущенных значений и временны меток
+
+-   **Агрегация**: преобразование к суточному, месячному и годовому разрешению
+
+-   **Анализ переходов**: подсчет переходов параметра через заданный порог (например, температур через 0 градусов)
+
+-   **Визуализация**: построение графиков с линейными трендами и их параметрами
+
+    Ниже приведена схема наиболее типичного пайплайна использования пакета:
+
+![](images/pogodaR.png)
+
+## Типичный пайплан обработки данных
+
+Загрузим все файлы из тестовой папки. Функция `read_rp5_folder()` объединит все файлы из указанной папки в один датафрейм со столбцами Local_time, T, RRR, sss (это поведение можно переопределить, подробнее см. справку `?read_rp5_folder()`).
+
+Затем с помощью `separate_date_rp5()` разделим исходный столбец с датами на отдельные столбцы для удобства.
+
+Взглянем на пропущенные значения с помощью [`na_count_rp5()`]{.underline}
+
+```{r import, warning=FALSE}
 library(pogodaR)
-## basic example code
+library(dplyr)
+library(ggplot2)
+
+source_data <- read_rp5_folder('tests/testthat/test_data/') |>
+  separate_date_rp5()
+
+# Подсчет пропущенных значений в исходных данных
+source_data |> na_count_rp5()
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
+В исходных данных заменим пропуски методом линейной интерполяции, после чего убедимся, что они очищены:
 
-```{r cars}
-summary(cars)
+```{r temperature cleaning, message=TRUE, warning=FALSE}
+# 3. В сырых данных необходимо заменить пропуски в температурах.
+source_data_replaced_na <- source_data |>
+  na_fill_temp_rp5()
+
+# перепроверить, что пропуски очищены
+source_data_replaced_na |>
+  na_count_rp5()
 ```
 
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this.
+Вычислим количество переходов температур через 0 градусов каждый месяц. Для этого сгруппируем данные и воспользуемся `num_of_transitions(параметр, порог)`. Получившийся датафрейм визуализируем с помощью ggplot2:
 
-You can also embed plots, for example:
+```{r warning=FALSE}
+# 3.1. Количество переходов температур через 0 каждый месяц -
+# явления оттаивания-замерзания.
+daily_trans_of_temp_acr_0 <- source_data_replaced_na |>
+  group_by(Year, Month) |>
+  num_of_transitions(T, 0)
 
-```{r pressure, echo = FALSE}
-plot(pressure)
+ggplot(daily_trans_of_temp_acr_0, aes(Year, Num_of_transitions))+
+  geom_col()+
+  theme_minimal()+
+  facet_wrap(.~Month)+
+  labs(y = 'Количество переходов температур через 0°C',
+       x = 'Годы',
+       caption = 'Измерения проводились раз в 3 часа.\n Источник данных: rp5.ru')
 ```
 
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.
+Перейдем к суточному разрешению - оценим среднесуточную температуру и глубину снежного покрова, а также суммарное количество осадков в сутки:
+
+```{r aggregate (daily resolution), warning=FALSE}
+daily <- source_data_replaced_na |>
+  aggregate_rp5('day')
+daily
+```
+
+Заменим пропущенные значения в данных суточного разрешения (имеет смысл только для снега: если измерения осадков пропущены, скорее всего, их просто не было, поэтому в сумме прпоуски просто не учитываем. Пропуски в температурах были обработаны в исходных данных.)
+
+```{r}
+# замена пропусков
+daily_clean <- daily |>
+  na_fill_sn_rp5(10)
+
+# проверка
+daily_clean |>
+  na_count_rp5()
+```
+
+Теперь вычислим количество переходов среднесуточных температур через 0 градусов и визуализируем эти значения
+
+```{r warning=FALSE}
+# 6.1 количество переходов среднесуточных температур через 0
+
+t_avg_cross_zero <- daily_clean |>
+  group_by(Year, Month) |>
+  num_of_transitions(T_avg, 0)
+
+# Результаты удобно изучать визуально:
+ggplot(t_avg_cross_zero, aes(Year, Num_of_transitions))+
+  geom_col()+
+  theme_minimal()+
+  facet_wrap(.~Month)+
+  labs(y = 'Количество переходов среднесуточных температур\n через 0°C',
+       x = 'Годы',
+       caption = 'Источник данных: rp5.ru')
+```
+
+Полезно оценить не только количество переходов, но и их частоту:
+
+```{r}
+# 7. частота переходов температур через 0 градусов в месяц
+daily_clean |>
+  freq_of_transitions(T_avg, 0) |>
+  ggplot(aes(Year, Freq_of_transitions))+
+  geom_col()+
+  theme_minimal()+
+  facet_wrap(.~Month)+
+  labs(y = 'Частота переходов температур\n через 0°C',
+       x = 'Годы',
+       caption = 'Источник данных: rp5.ru')
+```
+
+Наконец, перейдем к месячному разрешению, рассчитаем линейный тренд после сглаживания параметра скользящим средним и построим соответствующие графики для каждого месяца:
+
+```{r message=FALSE, warning=FALSE}
+# 8. Перейдем к месячному разрешению
+monthly <- daily_clean |>
+  aggregate_rp5('month') |>
+  mutate(Tavg_smoothed = means_smooth(T_avg))  # добавим сглаженный скользящим средним параметр
+
+
+# 10. Расчет линейного тренда среднемесячных температур
+# с группировкой
+trends_by_month <- monthly |>
+  dplyr::group_by(Month) |>
+  linear_trend(Year, Tavg_smoothed)
+
+# Визуализируем результат
+graph_with_trends(data = monthly,
+              trend = trends_by_month,
+              divide_by_month = TRUE,
+              y = T_avg,
+              y_smoothed = Tavg_smoothed,
+              geom_type = 'line',
+              x_label = 'Годы',
+              y_label = 'Температура, °C')
+```
+
+Выполним то же самое для годового разрешения:
+
+```{r message=FALSE, warning=FALSE}
+annualy <- monthly |>
+  aggregate_rp5('year') |>
+  mutate(Tavg_smoothed = means_smooth(T_avg, window = 5))
+
+annualy_trend <- annualy |>
+  linear_trend(Year, T_avg)
+
+graph_with_trends(data = annualy,
+                  trend = annualy_trend,
+                  y = T_avg,
+                  y_smoothed = Tavg_smoothed)
+```
