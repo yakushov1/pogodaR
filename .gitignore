@@ -4,7 +4,5 @@
 .httr-oauth
 .DS_Store
 .quarto
-.csv
-test_script.R
 inst/extdata
 
