@@ -3,6 +3,8 @@ library(tidyverse)
 library(pogodaR)
 
 
+
+
 # 1. загрузка всех файлов из исходной папки,
 # По умолчанию будут загружены столбцы с температурой, глубиной снежного покрова и количеством осадков
 source_data <- read_rp5_folder('tests/testthat/test_data/')|>
